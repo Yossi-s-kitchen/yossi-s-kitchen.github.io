@@ -480,7 +480,7 @@ async function initDb(){
     updateTicker(); safeRender();
   }, ()=>{});
   db.collection("orders").orderBy("at","asc").onSnapshot(q=>{
-    S.orders=q.docs.map(d=>({id:d.id,...d.data()}));
+    S.orders=q.docs.map(d=>{ const x=d.data(); return {id:d.id,...x,toasts:(x.toasts||[]).map(t=>Array.isArray(t)?t:(t&&t.t)||[])}; });
     if ((S.view==="admin" && S.admin) || S.view==="home") safeRender();
   }, ()=>{});
 }
@@ -619,7 +619,7 @@ document.addEventListener("click", async ev=>{
       if (!S.db){ S.err="אין חיבור לשרת ההזמנות. בדקו שיש אינטרנט ונסו שוב."; render(); return; }
       S.busy=true; render();
       try {
-        const body={name, toasts:S.cart.toasts, main:S.cart.meal?.main||null, sides:S.cart.meal?.sides||[]};
+        const body={name, toasts:S.cart.toasts.map(t=>({t})), main:S.cart.meal?.main||null, sides:S.cart.meal?.sides||[]};
         if (S.editingId){
           const cur=S.orders.find(o=>o.id===S.editingId);
           if (!cur){ S.busy=false; S.editingId=null; S.err="ההזמנה הזו כבר לא קיימת (אולי יוסי מחק אותה). אפשר לשלוח אותה כהזמנה חדשה."; render(); return; }
@@ -690,7 +690,7 @@ document.addEventListener("click", async ev=>{
       const main = a==="delMeal" ? null : o.main, sides = a==="delMeal" ? [] : (o.sides||[]);
       try {
         if (!toasts.length && !main) await S.db.doc("orders/"+id).delete();
-        else await S.db.doc("orders/"+id).update({toasts, main, sides});
+        else await S.db.doc("orders/"+id).update({toasts:toasts.map(t=>({t})), main, sides});
       } catch(e){ S.err="המחיקה נכשלה."; render(); }
       break; }
     case "askWipe": S.confirmAll=true; render(); break;
